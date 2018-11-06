@@ -67,17 +67,9 @@ object FormMain: TFormMain
     Height = 25
     Caption = 'Save'
     TabOrder = 4
-    OnClick = BitBtn3Click
   end
   object OpenDialog1: TOpenDialog
     Left = 200
     Top = 184
-  end
-  object SaveDialog1: TSaveDialog
-    DefaultExt = '*.csv'
-    Filter = '*.csv|*.csv'
-    Options = [ofReadOnly, ofHideReadOnly, ofEnableSizing]
-    Left = 256
-    Top = 344
   end
 end

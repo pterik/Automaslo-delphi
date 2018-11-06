@@ -44,18 +44,11 @@ i,j, Desc_begin, Desc_End, Desc_Len:integer;
 HeadingTitle, Brand, Model, BigImg, SmallImg:string;
 Description:array of string;
 Descr:wideString;
-sr:TSearchRec;
 begin
 if not OpenDialog1.Execute then exit;
-FName:=OpenDialog1.FileName;
-FIlesfolder:=ExtractFileDir(FName);
-//if FindFirst(FIlesfolder+'*.html', FaAnyFile, sr)=0 then
-//  begin
-//    repeat
-//    Memo2.Lines.Add(sr.Name);
-//    until Findnext(sr)<>0;
-//    FindClose(sr);
-//  end;
+    FName:=OpenDialog1.FileName;
+    FIlesfolder:=ExtractFileDir(FName);
+    //S.LoadFromFile(FName);
 
     Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
     for I := 0 to Memo1.Lines.Count-1 do
@@ -124,7 +117,7 @@ end;
 procedure TFormMain.BitBtn3Click(Sender: TObject);
 begin
 if not SaveDialog1.Execute then exit;
-Memo2.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
+Memo2.Lines.SaveToFile(SaveDialog1.FileName);
 end;
 
 function TFormMain.CopyBySample(SearchStr, SampleBegin, SampleEnd: string): string;
@@ -138,7 +131,7 @@ if (Pos1>0) and (Pos2>0)
 end;
 
 procedure TFormMain.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
-var Quote:string;
+var Quote:char;
 begin
 if (isQuoted=true) then Quote:='"' else Quote:='';
 if (FirstPosition = true)

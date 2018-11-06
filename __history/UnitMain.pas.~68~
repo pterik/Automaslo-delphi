@@ -49,15 +49,14 @@ begin
 if not OpenDialog1.Execute then exit;
 FName:=OpenDialog1.FileName;
 FIlesfolder:=ExtractFileDir(FName);
-//if FindFirst(FIlesfolder+'*.html', FaAnyFile, sr)=0 then
-//  begin
-//    repeat
-//    Memo2.Lines.Add(sr.Name);
-//    until Findnext(sr)<>0;
-//    FindClose(sr);
-//  end;
+if FindFirst(FIlesfolder+'*.html')=0 then
+  begin
+    repeat
+    Memo2.Lines.Add(sr.Name);
+    until Findnext(sr)<>0;
+  end;
 
-    Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
+//Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
     for I := 0 to Memo1.Lines.Count-1 do
       begin
       if Pos('<h1 class="heading_title">',Memo1.Lines[i])>0

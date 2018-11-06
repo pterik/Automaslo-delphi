@@ -74,9 +74,6 @@ object FormMain: TFormMain
     Top = 184
   end
   object SaveDialog1: TSaveDialog
-    DefaultExt = '*.csv'
-    Filter = '*.csv|*.csv'
-    Options = [ofReadOnly, ofHideReadOnly, ofEnableSizing]
     Left = 256
     Top = 344
   end

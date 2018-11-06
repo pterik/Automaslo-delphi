@@ -13,13 +13,17 @@ type
     BitBtn2: TBitBtn;
     OpenDialog1: TOpenDialog;
     Memo1: TMemo;
-    MemoParsed: TMemo;
+    Memo2: TMemo;
+    BitBtn3: TBitBtn;
+    SaveDialog1: TSaveDialog;
     procedure BitBtn2Click(Sender: TObject);
+    procedure BitBtn3Click(Sender: TObject);
   private
     { Private declarations }
   public
-    { Public declarations }
+    OutputStr:widestring;
     function CopyBySample(SearchStr, SampleBegin, SampleEnd:string):string;
+    procedure SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
   end;
 
 var
@@ -29,7 +33,7 @@ implementation
 
 {$R *.dfm}
 
-uses ComObj, XMLIntf, XMLDoc, MsXml, MsXmldom, ActiveX, XmlDom, XmlConst;
+uses System.WideStrUtils;
 
 procedure TFormMain.BitBtn2Click(Sender: TObject);
 var FName, FilesFolder:string;
@@ -39,41 +43,41 @@ i,j, Desc_begin, Desc_End, Desc_Len:integer;
 //SearchString, SampleBegin, SampleEnd:string;
 HeadingTitle, Brand, Model, BigImg, SmallImg:string;
 Description:array of string;
+Descr:wideString;
+sr:TSearchRec;
 begin
-if OpenDialog1.Execute then
-  begin
-    FName:=OpenDialog1.FileName;
-    FIlesfolder:=ExtractFileDir(FName);
-    //S.LoadFromFile(FName);
+if not OpenDialog1.Execute then exit;
+FName:=OpenDialog1.FileName;
+FIlesfolder:=ExtractFileDir(FName);
 
-    Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
+//Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
     for I := 0 to Memo1.Lines.Count-1 do
       begin
       if Pos('<h1 class="heading_title">',Memo1.Lines[i])>0
         then
           begin
           HeadingTitle:=CopyBySample(Memo1.Lines[i], '<span>','</span>');
-          MemoParsed.Lines.Add('HeadingTitle="'+HeadingTitle+'"!');
+          SaveIt(HeadingTitle,true, true);
           end;
       if Pos('<a itemprop="brand" content=',Memo1.Lines[i])>0
         then
           begin
           Brand:=CopyBySample(Memo1.Lines[i], 'content="','" href=');
-          MemoParsed.Lines.Add('Brand="'+Brand+'"!');
+          SaveIt(Brand, false, true);
           end;
       if Pos('<span>Ìîäåëü:</span>',Memo1.Lines[i])>0
         then
           begin
           Model:=Trim(CopyBySample(Memo1.Lines[i], '</span>','<br />'));
-          MemoParsed.Lines.Add('Model="'+Model+'"!');
+          SaveIt(Model, false, true);
           end;
       if Pos('<div class="image">',Memo1.Lines[i])>0
         then
           begin
           BigImg:=Trim(CopyBySample(Memo1.Lines[i], 'image"><a href="','" title="'));
-          MemoParsed.Lines.Add('BigImg="'+BigImg+'"!');
           SmallImg:=Trim(CopyBySample(Memo1.Lines[i], '<img itemprop="image" src="','" title="'));
-          MemoParsed.Lines.Add('SmallImg="'+SmallImg+'"!');
+          if (Length(BigImg)>0) and (Length(SmallImg)>0) then SaveIt(BigImg+','+SmallImg, false, true);
+          if (Length(BigImg)>0) and (Length(SmallImg)=0) then SaveIt(BigImg, False, true);
           end;
       if Pos('itemprop="desctiption">',Memo1.Lines[i])>0
         then
@@ -98,23 +102,22 @@ if OpenDialog1.Execute then
           //MemoParsed.Lines.Add('Description="'+IntToStr(Desc_Begin)+'!'+IntToStr(Desc_End));
           for j := 0 to Desc_Len-1 do
             if (Pos('<div',Description[j])>0) or (Pos('</div>', Description[j])>0) then Description[j]:='';
+          Descr:='';
           for j := 0 to Desc_Len-1 do
-            if not (Description[j]='') then MemoParsed.Lines.Add(Description[j]);
+            if not (Description[j]='') then Descr:=Descr+Description[j];
+          Descr:=WideStringReplace(Descr, chr(13)+chr(10), '',[rfReplaceAll]);
+          SaveIt(Descr, false, false);
           end;
-
       //Ifs finished here
+      //Title, Brand, Model, Img1+ Img2 ÷åðåç çàïÿòóþ, Description
       end;
-  end;
-    //<h1 class="heading_title"><span>Aral HighTroniñ 5W-40, 4ë.</span></h1>
-    //<a itemprop="brand" content="Aral" href="https://automaslo.com/aral">Aral</a>
-    //<span>Ìîäåëü:</span> a1707<br />
-    //<img itemprop="image" src="https://automaslo.com/image/cache/data/products/aral/Maslo/Aral_HighTronic_5W40_1L-350x350.jpg"
-    //           title="Aral HighTroniñ 5W-40, 1ë." alt="Aral HighTroniñ 5W-40, 1ë." id="image">
-    // itemprop="desctiption">
-    //    <div class="left">
-    //     description here
-    //     <div class="right">
-    //     <ul class="product-benefit">
+Memo2.Lines.Add(OutputStr);
+end;
+
+procedure TFormMain.BitBtn3Click(Sender: TObject);
+begin
+if not SaveDialog1.Execute then exit;
+Memo2.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
 end;
 
 function TFormMain.CopyBySample(SearchStr, SampleBegin, SampleEnd: string): string;
@@ -125,6 +128,15 @@ Pos2:=Pos(SampleEnd, SearchStr, Pos1);
 if (Pos1>0) and (Pos2>0)
   then Result:=Copy(SearchStr,Pos1+length(SampleBegin), Pos2-Pos1-length(SampleBegin))
   else Result:='';
+end;
+
+procedure TFormMain.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
+var Quote:string;
+begin
+if (isQuoted=true) then Quote:='"' else Quote:='';
+if (FirstPosition = true)
+  then OutputStr:=Quote+PrintStr+Quote
+  else OutputStr:=OutputStr+Chr(9)+Quote+PrintStr+Quote;
 end;
 
 end.

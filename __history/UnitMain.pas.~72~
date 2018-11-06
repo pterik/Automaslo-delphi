@@ -57,7 +57,7 @@ FIlesfolder:=ExtractFileDir(FName);
 //    FindClose(sr);
 //  end;
 
-    Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
+//Memo1.Lines.LoadFromFile(FName, TEncoding.UTF8);
     for I := 0 to Memo1.Lines.Count-1 do
       begin
       if Pos('<h1 class="heading_title">',Memo1.Lines[i])>0
