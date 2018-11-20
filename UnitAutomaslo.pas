@@ -7,6 +7,8 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP;
 
+const Brands : array [1..9] of string = ('AGIP','AGRINOL','АГРИНОЛ', 'ARAL','BP','CASTROL','ELF','FUCHS TITAN','HONDA');
+
 type
   TFormAutoMaslo = class(TForm)
     BitBtn1: TBitBtn;
@@ -20,6 +22,7 @@ type
     procedure BitBtn3Click(Sender: TObject);
   private
     { Private declarations }
+    function ReplaceCapitals(const Str:string):string;
   public
     OutputStr:widestring;
     function CopyBySample(SearchStr, SampleBegin, SampleEnd:string):string;
@@ -41,11 +44,13 @@ var FName, FilesFolder:string;
 //S:TStringStream;
 i,j, Desc_begin, Desc_End, Desc_Len:integer;
 //SearchString, SampleBegin, SampleEnd:string;
-HeadingTitle, Brand, Model, BigImg, SmallImg:string;
+Litraz, HeadingTitle, Brand, Model, BigImg, SmallImg, ShortImg:string;
 Description:array of string;
 Descr:wideString;
 sr:TSearchRec;
 begin
+Memo1.Clear;
+Memo2.Clear;
 if not OpenDialog1.Execute then exit;
 FName:=OpenDialog1.FileName;
 FIlesfolder:=ExtractFileDir(FName);
@@ -61,7 +66,20 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
         then
           begin
           HeadingTitle:=CopyBySample(Memo1.Lines[i], '<span>','</span>');
-          SaveIt(HeadingTitle,true, true);
+          if (Pos(',',HeadingTitle)>0) and (Pos('л.', HeadingTitle)>0) then
+            begin
+            Litraz:=Trim(Copy(HeadingTitle,1+Pos(',',HeadingTitle), length(HeadingTitle)));
+            HeadingTitle:=Trim(Copy(HeadingTitle,1, -1+Pos(',',HeadingTitle)));
+            HeadingTitle:=ReplaceCapitals(HeadingTitle);
+            SaveIt(HeadingTitle,true, true);
+            //Litraz:=WideStringReplace(Litraz,'"', '',[rfReplaceAll]);
+            SaveIt(Litraz,false, true);
+            end
+            else
+              begin
+              SaveIt(HeadingTitle,true, true);
+              SaveIt('',false, true);
+              end;
           end;
       if Pos('<a itemprop="brand" content=',Memo1.Lines[i])>0
         then
@@ -82,6 +100,16 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
           SmallImg:=Trim(CopyBySample(Memo1.Lines[i], '<img itemprop="image" src="','" title="'));
           if (Length(BigImg)>0) and (Length(SmallImg)>0) then SaveIt(BigImg+','+SmallImg, false, true);
           if (Length(BigImg)>0) and (Length(SmallImg)=0) then SaveIt(BigImg, False, true);
+          // Только большая картинка без пути
+          if (Length(BigImg)>0) then
+            begin
+            ShortImg:=WideStringReplace(BigImg, 'https://', '',[rfReplaceAll]);
+            ShortImg:=WideStringReplace(BigImg, 'http://', '',[rfReplaceAll]);
+            ShortImg:=WideStringReplace(ShortImg,'automaslo.com', 'C:\',[rfReplaceAll]);
+            ShortImg:=WideStringReplace(ShortImg,'/', '\',[rfReplaceAll]);
+            SaveIt(ExtractFileName(ShortImg), false, true);
+            end
+            else SaveIt('', false, true);
           end;
       if Pos('itemprop="desctiption">',Memo1.Lines[i])>0
         then
@@ -136,6 +164,25 @@ Pos2:=Pos(SampleEnd, SearchStr, Pos1);
 if (Pos1>0) and (Pos2>0)
   then Result:=Copy(SearchStr,Pos1+length(SampleBegin), Pos2-Pos1-length(SampleBegin))
   else Result:='';
+end;
+
+function TFormAutoMaslo.ReplaceCapitals(const Str: string): string;
+var Brandname:string;
+where, i:integer;
+begin
+Result:=Str;
+for I := 1 to 9 do
+  begin
+  BrandName:=Brands[i];
+  if (pos(BrandName,UpperCase(Str))=0) and (pos(BrandName,Str)>0)
+    then
+    begin
+    Where:=pos(BrandName,UpperCase(Str));
+    Result:=Copy(Str,1, where)
+            +Copy(str, where+1, length(BrandName))
+            +Copy(str, where+length(BrandName)+1,length(Str));
+    end;
+  end;
 end;
 
 procedure TFormAutoMaslo.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
