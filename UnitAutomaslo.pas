@@ -110,6 +110,7 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
           for j := 0 to Desc_Len-1 do
             if not (Description[j]='') then Descr:=Descr+Description[j];
           Descr:=WideStringReplace(Descr, chr(13)+chr(10), '',[rfReplaceAll]);
+          Descr:=WideStringReplace(Descr, chr(9), ' ',[rfReplaceAll]);
           SaveIt(Descr, false, false);
           end;
       //Ifs finished here
