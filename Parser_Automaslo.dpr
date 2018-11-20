@@ -2,13 +2,14 @@ program Parser_Automaslo;
 
 uses
   Vcl.Forms,
-  UnitMain in 'UnitMain.pas' {Form2};
+  UnitAutomaslo in 'UnitAutomaslo.pas' {FormAutoMaslo};
 
 {$R *.res}
 
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TFormMain, FormMain);
+  //Application.CreateForm(TFormMain, FormMain);
+  Application.CreateForm(TFormAutoMaslo, FormAutoMaslo);
   Application.Run;
 end.

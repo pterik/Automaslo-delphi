@@ -8,7 +8,7 @@ uses
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP;
 
 type
-  TFormMain = class(TForm)
+  TFormAutoMaslo = class(TForm)
     BitBtn1: TBitBtn;
     BitBtn2: TBitBtn;
     OpenDialog1: TOpenDialog;
@@ -27,7 +27,7 @@ type
   end;
 
 var
-  FormMain: TFormMain;
+  FormAutoMaslo: TFormAutoMaslo;
 
 implementation
 
@@ -35,7 +35,7 @@ implementation
 
 uses System.WideStrUtils;
 
-procedure TFormMain.BitBtn2Click(Sender: TObject);
+procedure TFormAutoMaslo.BitBtn2Click(Sender: TObject);
 var FName, FilesFolder:string;
 //FileStream:TFileStream;
 //S:TStringStream;
@@ -121,13 +121,13 @@ FIlesfolder:=ExtractFileDir(FName);
 Memo2.Lines.Add(OutputStr);
 end;
 
-procedure TFormMain.BitBtn3Click(Sender: TObject);
+procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);
 begin
 if not SaveDialog1.Execute then exit;
 Memo2.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
 end;
 
-function TFormMain.CopyBySample(SearchStr, SampleBegin, SampleEnd: string): string;
+function TFormAutoMaslo.CopyBySample(SearchStr, SampleBegin, SampleEnd: string): string;
 var Pos1, Pos2:integer;
 begin
 Pos1:=Pos(SampleBegin, SearchStr);
@@ -137,7 +137,7 @@ if (Pos1>0) and (Pos2>0)
   else Result:='';
 end;
 
-procedure TFormMain.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
+procedure TFormAutoMaslo.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
 var Quote:string;
 begin
 if (isQuoted=true) then Quote:='"' else Quote:='';

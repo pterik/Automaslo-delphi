@@ -1,7 +1,7 @@
-object FormMain: TFormMain
+object FormAutoMaslo: TFormAutoMaslo
   Left = 0
   Top = 0
-  Caption = 'FormMain'
+  Caption = #1040#1074#1090#1086#1084#1072#1089#1083#1086
   ClientHeight = 488
   ClientWidth = 896
   Color = clBtnFace
