@@ -4,8 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons,
-  IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, SQLiteTable3;
 
 const Brands : array [1..9] of string = ('AGIP','AGRINOL','АГРИНОЛ', 'ARAL','BP','CASTROL','ELF','FUCHS TITAN','HONDA');
 
@@ -24,6 +23,10 @@ Export_Headers : array [1..Export_Items] of string = ('Категория','Товар','Поиск
 'Длина L2 (mm)','Ширина W1 (mm)','Ширина W2 (mm)','Толщина (мм)','Высота (mm)',
 'Тип радиатора','Модель автомобиля','Размеры радиатора (mm)','Впускной диаметр (mm)','Выпускной диаметр (mm)',
 'Впускной диаметр (?)','Выпускной диаметр (?)','Комплект (шт)','Материал','Примечание');
+
+My_Headers :array [1..13] of String = ('Категория','Товар','Видим','Вариант','Заголовок страницы','Ключевые слова',
+               'Описание страницы', 'Аннотация','Описание','Изображения','Производитель','Тип масла','SAE (Вязкость)');
+
 
 type
   TFormAutoMaslo = class(TForm)
@@ -44,7 +47,6 @@ type
     OutputStr:widestring;
     function CopyBySample(SearchStr, SampleBegin, SampleEnd:string):string;
     procedure SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
-    procedure SaveHeaders;
   end;
 
 var
@@ -170,9 +172,16 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
 end;
 
 procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);
+var  i:integer;
+s:widestring;
 begin
 if not SaveDialog1.Execute then exit;
-SaveHeaders;
+MemoHeaders.Clear;
+S:='';
+for I := 1 to Export_Items do
+  S:=S+Export_Headers[i];
+MemoHeaders.Lines.Add(S);
+
 MemoCode.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
 end;
 
@@ -203,17 +212,6 @@ for I := 1 to 9 do
             +Copy(str, where+length(BrandName)+1,length(Str));
     end;
   end;
-end;
-
-procedure TFormAutoMaslo.SaveHeaders;
-var i:integer;
-s:widestring;
-begin
-MemoHeaders.Clear;
-S:='';
-for I := 1 to Export_Items do
-  S:=S+Export_Headers[i];
-MemoHeaders.Lines.Add(S);
 end;
 
 procedure TFormAutoMaslo.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
