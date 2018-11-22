@@ -38,7 +38,7 @@ object FormAutoMaslo: TFormAutoMaslo
     TabOrder = 1
     OnClick = BitBtn2Click
   end
-  object MemoHtml: TMemo
+  object Memo1: TMemo
     Left = 8
     Top = 8
     Width = 880
@@ -49,7 +49,7 @@ object FormAutoMaslo: TFormAutoMaslo
     ScrollBars = ssBoth
     TabOrder = 2
   end
-  object MemoCode: TMemo
+  object Memo2: TMemo
     Left = 8
     Top = 264
     Width = 880
@@ -69,15 +69,6 @@ object FormAutoMaslo: TFormAutoMaslo
     Caption = 'Save'
     TabOrder = 4
     OnClick = BitBtn3Click
-  end
-  object MemoHeaders: TMemo
-    Left = 568
-    Top = 414
-    Width = 137
-    Height = 66
-    Lines.Strings = (
-      'MemoHeaders')
-    TabOrder = 5
   end
   object OpenDialog1: TOpenDialog
     Left = 200

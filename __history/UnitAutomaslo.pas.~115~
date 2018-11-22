@@ -9,15 +9,32 @@ uses
 
 const Brands : array [1..9] of string = ('AGIP','AGRINOL','АГРИНОЛ', 'ARAL','BP','CASTROL','ELF','FUCHS TITAN','HONDA');
 
+Export_Items = 70;
+Export_Headers : array [1..Export_Items] of string = ('Категория','Товар','Поисковые метки','Цена','Цена оптовая',
+'Адрес','Видим','Рекомендуемый','Бренд','Вариант',
+'Старая цена','Артикул','Склад','Заголовок страницы','Ключевые слова',
+'Описание страницы','Аннотация','Описание','Изображения','Производитель',
+'Емкость','Тип масла','Тип двигателя','SAE (Вязкость)','Применение',
+'ACEA','API','ILSAC','DEXTRON','JASO',
+'ISO','CCMC','CIK-FIA','NMMA','Класс вязкости',
+'Тип фильтра','Функция','Модель','Высота H1 (mm)','Высота H2 (mm)',
+'Диаметр внешний OD1 (mm)','Диаметр внешний OD2 (mm)','Диаметр внутренний ID1 (mm)','Диаметр внутренний ID2 (mm)','Резьба (?)',
+'Нижняя резьба (?)','Наруж. диаметр прокладки OD2 (mm)','Внутр. диаметр прокладки ID2 (mm)','Тип колодки','Передний/Задний',
+'Тип диска','Кол-во отверстий','Диаметр (mm) ','Диаметр фаски (mm)','Длина L1 (mm)',
+'Длина L2 (mm)','Ширина W1 (mm)','Ширина W2 (mm)','Толщина (мм)','Высота (mm)',
+'Тип радиатора','Модель автомобиля','Размеры радиатора (mm)','Впускной диаметр (mm)','Выпускной диаметр (mm)',
+'Впускной диаметр (?)','Выпускной диаметр (?)','Комплект (шт)','Материал','Примечание');
+
 type
   TFormAutoMaslo = class(TForm)
     BitBtn1: TBitBtn;
     BitBtn2: TBitBtn;
     OpenDialog1: TOpenDialog;
-    Memo1: TMemo;
-    Memo2: TMemo;
+    MemoHtml: TMemo;
+    MemoCode: TMemo;
     BitBtn3: TBitBtn;
     SaveDialog1: TSaveDialog;
+    MemoHeaders: TMemo;
     procedure BitBtn2Click(Sender: TObject);
     procedure BitBtn3Click(Sender: TObject);
   private
@@ -27,6 +44,7 @@ type
     OutputStr:widestring;
     function CopyBySample(SearchStr, SampleBegin, SampleEnd:string):string;
     procedure SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
+    procedure SaveHeaders;
   end;
 
 var
@@ -49,6 +67,8 @@ Description:array of string;
 Descr:wideString;
 sr:TSearchRec;
 begin
+MemoHtml.Clear;
+MemoCode.Clear;
 if not OpenDialog1.Execute then exit;
 FName:=OpenDialog1.FileName;
 FIlesfolder:=ExtractFileDir(FName);
@@ -56,21 +76,22 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
   begin
   repeat
 //  Memo2.Lines.Add(FIlesfolder+'\'+sr.Name);
-  Memo1.Clear;
-  Memo1.Lines.LoadFromFile(FIlesfolder+'\'+sr.Name, TEncoding.UTF8);
-  for I := 0 to Memo1.Lines.Count-1 do
+  MemoHtml.Clear;
+  MemoHtml.Lines.LoadFromFile(FIlesfolder+'\'+sr.Name, TEncoding.UTF8);
+  for I := 0 to MemoHtml.Lines.Count-1 do
       begin
-      if Pos('<h1 class="heading_title">',Memo1.Lines[i])>0
+      if Pos('<h1 class="heading_title">',MemoHtml.Lines[i])>0
         then
           begin
-          HeadingTitle:=CopyBySample(Memo1.Lines[i], '<span>','</span>');
+          HeadingTitle:=CopyBySample(MemoHtml.Lines[i], '<span>','</span>');
           if (Pos(',',HeadingTitle)>0) and (Pos('л.', HeadingTitle)>0) then
             begin
             Litraz:=Trim(Copy(HeadingTitle,1+Pos(',',HeadingTitle), length(HeadingTitle)));
-            HeadingTitle:=Trim(Copy(HeadingTitle,1, Pos(',',HeadingTitle)));
+            HeadingTitle:=Trim(Copy(HeadingTitle,1, -1+Pos(',',HeadingTitle)));
             HeadingTitle:=ReplaceCapitals(HeadingTitle);
             SaveIt(HeadingTitle,true, true);
-            SaveIt('"'+Litraz+'"',false, true);
+            //Litraz:=WideStringReplace(Litraz,'"', '',[rfReplaceAll]);
+            SaveIt(Litraz,false, true);
             end
             else
               begin
@@ -78,23 +99,23 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
               SaveIt('',false, true);
               end;
           end;
-      if Pos('<a itemprop="brand" content=',Memo1.Lines[i])>0
+      if Pos('<a itemprop="brand" content=',MemoHtml.Lines[i])>0
         then
           begin
-          Brand:=CopyBySample(Memo1.Lines[i], 'content="','" href=');
+          Brand:=CopyBySample(MemoHtml.Lines[i], 'content="','" href=');
           SaveIt(Brand, false, true);
           end;
-      if Pos('<span>Модель:</span>',Memo1.Lines[i])>0
+      if Pos('<span>Модель:</span>',MemoHtml.Lines[i])>0
         then
           begin
-          Model:=Trim(CopyBySample(Memo1.Lines[i], '</span>','<br />'));
+          Model:=Trim(CopyBySample(MemoHtml.Lines[i], '</span>','<br />'));
           SaveIt(Model, false, true);
           end;
-      if Pos('<div class="image">',Memo1.Lines[i])>0
+      if Pos('<div class="image">',MemoHtml.Lines[i])>0
         then
           begin
-          BigImg:=Trim(CopyBySample(Memo1.Lines[i], 'image"><a href="','" title="'));
-          SmallImg:=Trim(CopyBySample(Memo1.Lines[i], '<img itemprop="image" src="','" title="'));
+          BigImg:=Trim(CopyBySample(MemoHtml.Lines[i], 'image"><a href="','" title="'));
+          SmallImg:=Trim(CopyBySample(MemoHtml.Lines[i], '<img itemprop="image" src="','" title="'));
           if (Length(BigImg)>0) and (Length(SmallImg)>0) then SaveIt(BigImg+','+SmallImg, false, true);
           if (Length(BigImg)>0) and (Length(SmallImg)=0) then SaveIt(BigImg, False, true);
           // Только большая картинка без пути
@@ -108,24 +129,25 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
             end
             else SaveIt('', false, true);
           end;
-      if Pos('itemprop="desctiption">',Memo1.Lines[i])>0
+      if Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
         then
           begin
           Desc_Begin:=0;
           Desc_End:=0;
           for j:=1 to 50 do
             begin
-            if Pos('<div class="left">',Memo1.Lines[i+j])>0 then Desc_Begin:=j;
-            if Pos('<ul class="product-benefit">',Memo1.Lines[i+j])>0 then begin Desc_End:=j; break; end;
+            if Pos('<div class="left">',MemoHtml.Lines[i+j])>0 then Desc_Begin:=j;
+            if Pos('<ul class="product-benefit">',MemoHtml.Lines[i+j])>0 then begin Desc_End:=j; break; end;
             end;
           SetLength(Description,0);
+          Desc_len:=0;
           if (Desc_End>Desc_Begin)  and not (Desc_begin+Desc_End=0) then
             begin
             Desc_Len:=Desc_End-Desc_Begin;
             SetLength(Description,Desc_Len);
             for j := 0 to Desc_Len-1 do
               begin
-              Description[j]:=Trim(Memo1.Lines[i+Desc_Begin+j]);
+              Description[j]:=Trim(MemoHtml.Lines[i+Desc_Begin+j]);
               end;
             end;
           //MemoParsed.Lines.Add('Description="'+IntToStr(Desc_Begin)+'!'+IntToStr(Desc_End));
@@ -141,7 +163,7 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
       //Ifs finished here
       //Title, Brand, Model, Img1+ Img2 через запятую, Description
       end;
-  Memo2.Lines.Add(OutputStr);
+  MemoCode.Lines.Add(OutputStr);
   until Findnext(sr)<>0;
   FindClose(sr);
   end;
@@ -150,7 +172,8 @@ end;
 procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);
 begin
 if not SaveDialog1.Execute then exit;
-Memo2.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
+SaveHeaders;
+MemoCode.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
 end;
 
 function TFormAutoMaslo.CopyBySample(SearchStr, SampleBegin, SampleEnd: string): string;
@@ -168,7 +191,7 @@ var Brandname:string;
 where, i:integer;
 begin
 Result:=Str;
-for I := 1 to 8 do
+for I := 1 to 9 do
   begin
   BrandName:=Brands[i];
   if (pos(BrandName,UpperCase(Str))=0) and (pos(BrandName,Str)>0)
@@ -180,6 +203,17 @@ for I := 1 to 8 do
             +Copy(str, where+length(BrandName)+1,length(Str));
     end;
   end;
+end;
+
+procedure TFormAutoMaslo.SaveHeaders;
+var i:integer;
+s:widestring;
+begin
+MemoHeaders.Clear;
+S:='';
+for I := 1 to Export_Items do
+  Memo
+
 end;
 
 procedure TFormAutoMaslo.SaveIt(const PrintStr: widestring; const FirstPosition:boolean; const isQuoted:boolean);
