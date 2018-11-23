@@ -125,13 +125,13 @@ with Row do
 end;
 
 procedure TFormAutoMaslo.BitBtn2Click(Sender: TObject);
-var FName, FilesFolder:WideString;
+var FName, FilesDir:WideString;
 ParsedRow:ExportRows;
 //FileStream:TFileStream;
 //S:TStringStream;
 i,j, offset, Desc_begin, Desc_End, Desc_Len:integer;
 ExportedFile, DirName:Widestring;
-FolderName, BigImg, SmallImg, ShortImg:WideString;
+BigImg, SmallImg, ShortImg:WideString;
 Description:array of WideString;
 Descr:wideString;
 sr:TSearchRec;
@@ -143,16 +143,16 @@ PB.Position:=Pb.Min;
 MemoHtml.Clear;
 MemoCode.Clear;
 FName:=OpenDialog1.FileName;
-FIlesfolder:=ExtractFileDir(FName);
+FilesDir:=ExtractFileDir(FName);
 PB.StepIt;
-if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
+if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
   begin
   OutputStr:=Export_Header[1];
   for I := 2 to Header_Size do OutputStr:=OutputStr+FileSeparator+Export_Header[i];
   MemoCode.Lines.Add(OutputStr);
   repeat
   MemoHtml.Clear;
-  MemoHtml.Lines.LoadFromFile(FIlesfolder+'\'+sr.Name, TEncoding.UTF8);
+  MemoHtml.Lines.LoadFromFile(FilesDir+'\'+sr.Name, TEncoding.UTF8);
   for I := 0 to MemoHtml.Lines.Count-1 do
       begin
       InitRow(ParsedRow);
@@ -268,23 +268,24 @@ if FindFirst(FIlesfolder+'\*.html', FaAnyFile, sr)=0 then
   FindClose(sr);
   end;
 PB.Position:=PB.Max;
-FolderName:=FIlesfolder;
-while Pos('\',FolderName)>0 do
-  begin
-  FolderName:=Copy(FolderName,Pos('\',FolderName)+1, length(FolderName));
-  MemoHtml.Lines.Add(FolderName);
-  end;
-if length(FolderName)>0 then DirName:=Copy(FIlesfolder,offset, length(FilesFolder)) else DirName:='empty';
-ExportedFile:=FIlesfolder+'\'+DirName+'.csv';
-try
-if FileExists(ExportedFile) then DeleteFile(ExportedFile);
-  except on E: Exception do
-  begin
-  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
-  exit;
-  end;
-end;
-MemoCode.Lines.SaveToFile(ExportedFile, TEncoding.ANSI);
+DirName:=FilesDir;
+//while Pos('\',DirName)>0 do
+//  begin
+//  DirName:=Copy(DirName,Pos('\',DirName)+1, length(DirName));
+//  MemoHtml.Lines.Add(DirName);
+//  end;
+if length(DirName)=0 then DirName:='empty';
+ExportedFile:=FilesDir+'\'+DirName+'.csv';
+MemoHtml.Lines.Add(ExportedFile);
+//try
+//if FileExists(ExportedFile) then DeleteFile(ExportedFile);
+//  except on E: Exception do
+//  begin
+//  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
+//  exit;
+//  end;
+//end;
+//MemoCode.Lines.SaveToFile(ExportedFile, TEncoding.ANSI);
 end;
 
 procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);

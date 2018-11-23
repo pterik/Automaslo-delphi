@@ -268,15 +268,15 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
   FindClose(sr);
   end;
 PB.Position:=PB.Max;
-DirName:=FilesDir;
+//DirName:=FilesDir;
 //while Pos('\',DirName)>0 do
 //  begin
 //  DirName:=Copy(DirName,Pos('\',DirName)+1, length(DirName));
 //  MemoHtml.Lines.Add(DirName);
 //  end;
-if length(DirName)=0 then DirName:='empty';
-ExportedFile:=FilesDir+'\'+DirName+'.csv';
-MemoHtml.Lines.Add(ExportedFile);
+//if length(DirName)=0 then DirName:='empty';
+//ExportedFile:=FilesDir+'\'+DirName+'.csv';
+//MemoHtml.Lines.Add(ExportedFile);
 //try
 //if FileExists(ExportedFile) then DeleteFile(ExportedFile);
 //  except on E: Exception do
