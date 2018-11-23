@@ -11,6 +11,7 @@ object FormAutoMaslo: TFormAutoMaslo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   DesignSize = (
     896
     488)
@@ -44,8 +45,7 @@ object FormAutoMaslo: TFormAutoMaslo
     Width = 880
     Height = 241
     Anchors = [akLeft, akTop, akRight, akBottom]
-    Lines.Strings = (
-      'Memo1')
+    ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 2
   end
@@ -59,9 +59,10 @@ object FormAutoMaslo: TFormAutoMaslo
     ScrollBars = ssBoth
     TabOrder = 3
     WantReturns = False
+    WordWrap = False
   end
   object BitBtn3: TBitBtn
-    Left = 168
+    Left = 152
     Top = 455
     Width = 75
     Height = 25
@@ -70,13 +71,11 @@ object FormAutoMaslo: TFormAutoMaslo
     TabOrder = 4
     OnClick = BitBtn3Click
   end
-  object MemoHeaders: TMemo
-    Left = 568
-    Top = 414
-    Width = 137
-    Height = 66
-    Lines.Strings = (
-      'MemoHeaders')
+  object PB: TProgressBar
+    Left = 272
+    Top = 463
+    Width = 497
+    Height = 17
     TabOrder = 5
   end
   object OpenDialog1: TOpenDialog
