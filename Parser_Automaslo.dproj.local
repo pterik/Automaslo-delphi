@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>1899/12/30 00:00:00.000.367,=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.233,D:\Projects\AutoMasla\SourceCode_automaslo\Parser_Automaslo.dproj=D:\Projects\AutoMasla\SourceCode_Berlin\Parser_Autotech.dproj</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.476,C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Project1.dproj=D:\Projects\AutoMasla\SourceCode_Berlin\Parser_Autotech.dproj</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.173,C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.pas=D:\Projects\AutoMasla\SourceCode_Berlin\UnitMain.pas</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.097,D:\Projects\AutoMasla\Automaslo-delphi\UnitAutomaslo.dfm=D:\Projects\AutoMasla\Automaslo-delphi\UnitMain.dfm</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.680,D:\Projects\AutoMasla\Automaslo-delphi\Parser_Automaslo.dproj=D:\Projects\AutoMasla\Sourcecode\Automaslo-delphi\Parser_Automaslo.dproj</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.097,D:\Projects\AutoMasla\Automaslo-delphi\UnitAutomaslo.pas=D:\Projects\AutoMasla\Automaslo-delphi\UnitMain.pas</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.686,=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
-    <Transaction>1899/12/30 00:00:00.000.173,C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.dfm=D:\Projects\AutoMasla\SourceCode_Berlin\UnitMain.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.233,D:\Projects\AutoMasla\SourceCode_Berlin\Parser_Autotech.dproj=D:\Projects\AutoMasla\SourceCode_automaslo\Parser_Automaslo.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.173,D:\Projects\AutoMasla\SourceCode_Berlin\UnitMain.dfm=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.680,D:\Projects\AutoMasla\Sourcecode\Automaslo-delphi\Parser_Automaslo.dproj=D:\Projects\AutoMasla\Automaslo-delphi\Parser_Automaslo.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.476,D:\Projects\AutoMasla\SourceCode_Berlin\Parser_Autotech.dproj=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.367,=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.097,D:\Projects\AutoMasla\Automaslo-delphi\UnitMain.pas=D:\Projects\AutoMasla\Automaslo-delphi\UnitAutomaslo.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.097,D:\Projects\AutoMasla\Automaslo-delphi\UnitMain.dfm=D:\Projects\AutoMasla\Automaslo-delphi\UnitAutomaslo.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.173,D:\Projects\AutoMasla\SourceCode_Berlin\UnitMain.pas=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.686,=C:\Users\vital\OneDrive\Мои документы\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
   </Transactions>
 </BorlandProject>

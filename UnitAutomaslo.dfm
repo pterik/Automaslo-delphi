@@ -49,7 +49,7 @@ object FormAutoMaslo: TFormAutoMaslo
     ScrollBars = ssBoth
     TabOrder = 2
   end
-  object MemoCode: TMemo
+  object MemoCodes: TMemo
     Left = 8
     Top = 264
     Width = 880

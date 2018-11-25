@@ -9,11 +9,13 @@ uses
 
 const
 FileSeparator = Chr(9);
+FileQuotes='"';
 
 Brands : array [1..9] of WideString = ('AGIP','AGRINOL','АГРИНОЛ', 'ARAL','BP','CASTROL','ELF','FUCHS TITAN','HONDA');
 
 Header_Size = 70;
-Export_Header : array [1..Header_size] of WideString = ('Категория','Товар','Поисковые метки','Цена','Цена оптовая',
+Export_Header : array [1..Header_size] of WideString =
+('Категория','Товар','Поисковые метки','Цена','Цена оптовая',
 'Адрес','Видим','Рекомендуемый','Бренд','Вариант',
 'Старая цена','Артикул','Склад','Заголовок страницы','Ключевые слова',
 'Описание страницы','Аннотация','Описание','Изображения','Производитель',
@@ -28,13 +30,15 @@ Export_Header : array [1..Header_size] of WideString = ('Категория','Товар','Пои
 'Тип радиатора','Модель автомобиля','Размеры радиатора (mm)','Впускной диаметр (mm)','Выпускной диаметр (mm)',
 'Впускной диаметр (?)','Выпускной диаметр (?)','Комплект (шт)','Материал','Примечание');
 
+Annotation_text_header = '<p><img src="/files/uploads/oil-cange.jpg" width="179" height="130" /><img src="/files/uploads/104967w640_h640_.jpg" width="293" height="130" /></p><p><span style="font-family: arial, helvetica, sans-serif;"><strong><span style="font-size: small;">';
+Annotation_text_footer = '&nbsp;</span></strong></span></p>';
 
-Row_size=11;
-My_Rows :array [1..Row_size] of WideString = ('Категория','Товар','Видим','Вариант', 'Описание страницы',
-                  'Аннотация','Описание','Изображения','Производитель','Тип масла','SAE (Вязкость)');
+//Row_size=11;
+//My_Rows :array [1..Row_size] of WideString = ('Категория','Товар','Видим','Вариант', 'Описание страницы',
+//                  'Аннотация','Описание','Изображения','Производитель','Тип масла','SAE (Вязкость)');
 type ExportRows=record
-Visible:char;
-Category, Item, variant, Short_descr, Full_descr, images, Vendor, Model, Oil_type, SAE:WideString;
+Empty, Category, Item, Visible, variant, Description, images, Vendor:widestring;
+Model, Brand, Oil_type, SAE, Page_description, Annotation:WideString;
 end;
 
 // Parsed_Export:array
@@ -48,6 +52,7 @@ end;
    Изображения  images
    Производитель  Vendor
    Модель         Model   -- не обрабатывается
+   Brand - торговая марка не обрабатывается
    Тип масла      Oil_type
    SAE (Вязкость)  SAE
 }
@@ -58,7 +63,7 @@ type
     BitBtn2: TBitBtn;
     OpenDialog1: TOpenDialog;
     MemoHtml: TMemo;
-    MemoCode: TMemo;
+    MemoCodes: TMemo;
     BitBtn3: TBitBtn;
     SaveDialog1: TSaveDialog;
     PB: TProgressBar;
@@ -68,12 +73,14 @@ type
   private
     { Private declarations }
     function ReplaceCapitals(const Str:WideString):WideString;
+    function SaveFirstTab(const Str: widestring): WideString;
+    function SaveQuotedTab(const Str: widestring):WideString;
+    function SavePlainTab(const Str: widestring): WideString;
   public
-    OutputStr:widestring;
+
     //ExportArray:array of ExportRows;
     //ExportArray_Size:integer;
-    function CopyBySample(SearchStr, SampleBegin, SampleEnd:WideString):Widestring;
-    procedure SaveIt(var Str: widestring; const FirstPosition:boolean; const isQuoted:boolean);
+    function CopyBySample(const SearchStr, SampleBegin, SampleEnd:WideString):Widestring;
     //procedure AddRowToArray(NewRow:ExportRows);
     procedure InitRow(Row:ExportRows);
   end;
@@ -103,6 +110,7 @@ ExportArray[ExportArray_Size].Vendor:=NewRow.Vendor;
 ExportArray[ExportArray_Size].Model:=NewRow.Model;
 ExportArray[ExportArray_Size].Oil_type:=NewRow.Oil_type;
 ExportArray[ExportArray_Size].SAE:=NewRow.SAE;
+Brand
 end;
 }
 
@@ -110,17 +118,20 @@ procedure TFormAutoMaslo.InitRow(Row: ExportRows);
 begin
 with Row do
   begin
+  Empty:='';
   Visible:='0';
   Category:='';
   Item:='';
   variant:='';
-  Short_descr:='';
-  Full_descr:='';
   images:='';
   Vendor:='';
   Model:='';
+  Brand:='';
   Oil_type:='';
   SAE:='';
+  Description:='';
+  Annotation:='';
+  Page_Description:='';
   end;
 end;
 
@@ -131,9 +142,10 @@ ParsedRow:ExportRows;
 //S:TStringStream;
 i,j, offset, Desc_begin, Desc_End, Desc_Len:integer;
 ExportedFile, DirName:Widestring;
-BigImg, SmallImg, ShortImg:WideString;
+heading_title, litraz, BigImg, SmallImg, ShortImg:WideString;
 Description:array of WideString;
-Descr:wideString;
+Descr:WideString;
+OutputStr:WideString;
 sr:TSearchRec;
 begin
 if not OpenDialog1.Execute then exit;
@@ -141,7 +153,7 @@ if not OpenDialog1.Execute then exit;
 BitBtn3.Enabled:=true;
 PB.Position:=Pb.Min;
 MemoHtml.Clear;
-MemoCode.Clear;
+MemoCodes.Clear;
 FName:=OpenDialog1.FileName;
 FilesDir:=ExtractFileDir(FName);
 PB.StepIt;
@@ -149,44 +161,41 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
   begin
   OutputStr:=Export_Header[1];
   for I := 2 to Header_Size do OutputStr:=OutputStr+FileSeparator+Export_Header[i];
-  MemoCode.Lines.Add(OutputStr);
+  MemoCodes.Lines.Add(OutputStr);
   repeat
+  OutputStr:='';
+  InitRow(ParsedRow);
   MemoHtml.Clear;
   MemoHtml.Lines.LoadFromFile(FilesDir+'\'+sr.Name, TEncoding.UTF8);
+  heading_title:='';
+  Litraz:='';
   for I := 0 to MemoHtml.Lines.Count-1 do
       begin
-      InitRow(ParsedRow);
       if Pos('<h1 class="heading_title">',MemoHtml.Lines[i])>0
         then
           begin
-          ParsedRow.Item:=CopyBySample(MemoHtml.Lines[i], '<span>','</span>');
-          if (Pos(WideString(','),ParsedRow.Item)>0) and (Pos(WideString('л.'),ParsedRow.Item)>0) then
+          heading_title:=ReplaceCapitals(trim(CopyBySample(MemoHtml.Lines[i], '<span>','</span>')));
+          if (Pos(',',heading_title)>0) then
+          // варианты
+          // 'title 4л.'
+          // 'title, 4л.
+          // 'title 4л'
+          // 'title,4л'
             begin
-            ParsedRow.Variant:=Trim(Copy(ParsedRow.Item,1+Pos(',',ParsedRow.Item), length(ParsedRow.Item)));
-            ParsedRow.Item:=Trim(Copy(ParsedRow.Item,1, -1+Pos(',',ParsedRow.Item)));
-            ParsedRow.Item:=ReplaceCapitals(ParsedRow.Item);
-            SaveIt(ParsedRow.Item,true, true);
-            ParsedRow.Variant:='Объем '+WideStringReplace(ParsedRow.Variant,',', '',[rfReplaceAll]);
-            SaveIt(ParsedRow.Variant,false, true);
-            end
-            else
-              begin
-              SaveIt(ParsedRow.Item,true, true);
-              ParsedRow.Variant:='';
-              SaveIt(ParsedRow.Variant,false,true);
-              end;
-          end;
+            Litraz:=Trim(Copy(heading_title,1+Pos(',',heading_title), length(heading_title)));
+            //heading_title:=Trim(Copy(heading_title,1, -1+Pos(',',heading_title)));
+            Litraz:='Объем '+trim(WideStringReplace(litraz,',', '',[rfReplaceAll]));
+            end;//
+          end;//найшли heading title и litraz
       if Pos('<a itemprop="brand" content=',MemoHtml.Lines[i])>0
         then
           begin
-          ParsedRow.Vendor:=CopyBySample(MemoHtml.Lines[i], 'content="','" href=');
-          SaveIt(ParsedRow.Vendor, false, true);
+          ParsedRow.Vendor:=Trim(CopyBySample(MemoHtml.Lines[i], 'content="','" href='));
           end;
       if Pos('<span>Модель:</span>',MemoHtml.Lines[i])>0
         then
           begin
           ParsedRow.Model:=Trim(CopyBySample(MemoHtml.Lines[i], '</span>','<br />'));
-          SaveIt(ParsedRow.Model, false, true);
           end;
       if Pos('<div class="image">',MemoHtml.Lines[i])>0
         then
@@ -207,11 +216,10 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
             ShortImg:=WideStringReplace(ParsedRow.images, 'https://', '',[rfReplaceAll]);
             ParsedRow.images:=WideStringReplace(ParsedRow.images, 'http://', '',[rfReplaceAll]);
             ParsedRow.images:=WideStringReplace(ParsedRow.images,'automaslo.com', 'C:\',[rfReplaceAll]);
-            ParsedRow.images:=WideStringReplace(ParsedRow.images,'/', '\',[rfReplaceAll]);
+            ParsedRow.images:=trim(WideStringReplace(ParsedRow.images,'/', '\',[rfReplaceAll]));
             //ParsedRow.images:=ExtractFileName(ShortImg);
             end
             else ParsedRow.images:='';
-          SaveIt(ParsedRow.images, false, true);
           end;
       if Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
         then
@@ -241,60 +249,72 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
           for j := 0 to Desc_Len-1 do
             if not (Description[j]='') then Descr:=Descr+Description[j];
           Descr:=WideStringReplace(Descr, chr(13)+chr(10), '',[rfReplaceAll]);
-          ParsedRow.Full_descr:=WideStringReplace(Descr, chr(9), ' ',[rfReplaceAll]);
-          SaveIt(ParsedRow.Full_descr, false, false);
-          // Todo: Добавлять ли поле описание - это текстовый вид HTML, первоначально просил не заполнять его
-          end;
-      end;
+          ParsedRow.Description:=trim(WideStringReplace(Descr, chr(9), ' ',[rfReplaceAll]));
+          end;  // Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
+      ParsedRow.Category:='Авто масла/Моторные/Легковые, Авто масла/Моторные/Микроавтобусы';
+      ParsedRow.Annotation:='';
+      ParsedRow.Page_Description:='';
+      ParsedRow.Item:=Heading_title;
+      ParsedRow.Variant:=Litraz;
+      end;   //MemoHtml.Lines.Count-1
   OutputStr:='';
   with ParsedRow do
     begin
-    OutputStr:=OutputStr+ParsedRow.Full_descr;
-    OutputStr:=OutputStr+ParsedRow.Visible;
-    OutputStr:=OutputStr+ParsedRow.Category;
-    OutputStr:=OutputStr+ParsedRow.Item;
-    OutputStr:=OutputStr+ParsedRow.variant;
-    OutputStr:=OutputStr+ParsedRow.Short_descr;
-    OutputStr:=OutputStr+ParsedRow.Full_descr;
-    OutputStr:=OutputStr+ParsedRow.images;
-    OutputStr:=OutputStr+ParsedRow.Vendor;
-    OutputStr:=OutputStr+ParsedRow.Model;
-    OutputStr:=OutputStr+ParsedRow.Oil_type;
-    OutputStr:=OutputStr+ParsedRow.SAE;
+    OutputStr:=OutputStr+SaveFirstTab(ParsedRow.Category); // 1 Категория
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Item);     // 2 Товар
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 3 Поисковые метки
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 4 Цена
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 5 Цена оптовая
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 6 Адрес - ссылка на страницу
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Visible);  // 7 Видимый - активный на сайте
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 8 Рекомендуемый  - оставить пустым
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 9 Бренд - проверить поле
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.variant);  // 10 Вариант, литраж - Объем 1л
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 11 Старая цена
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 12 Артикул - не проставляем, возможно поменяется
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 13 Склад  - пусто
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);;    // 14 Заголовок страницы = товар, вычисляется на сайте
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 15 Ключевые слова
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Page_description);    // 16 Описание страницы - Первое предложение из описания, формат текстовый
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Annotation);       // 17 Аннотация, краткое описание - HTML, Описание плюс 2 картинки
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Description); // 18 Описание
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.images);   // 19 Изображения
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Vendor);   // 20 Производитель
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 21 Емкость
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Oil_type);    // 22 Тип масла
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 23 Тип двигателя
+    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.SAE);      // 24 SAE (Вязкость)
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 25 Применение
+    for I := 26 to Header_Size do OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);
     end;
-  MemoCode.Lines.Add(OutputStr);
+  MemoCodes.Lines.Add(OutputStr);
   PB.StepIt;
   until Findnext(sr)<>0;
   FindClose(sr);
   end;
 PB.Position:=PB.Max;
-//DirName:=FilesDir;
-//while Pos('\',DirName)>0 do
-//  begin
-//  DirName:=Copy(DirName,Pos('\',DirName)+1, length(DirName));
-//  MemoHtml.Lines.Add(DirName);
-//  end;
-//if length(DirName)=0 then DirName:='empty';
-//ExportedFile:=FilesDir+'\'+DirName+'.csv';
-//MemoHtml.Lines.Add(ExportedFile);
-//try
-//if FileExists(ExportedFile) then DeleteFile(ExportedFile);
-//  except on E: Exception do
-//  begin
-//  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
-//  exit;
-//  end;
-//end;
-//MemoCode.Lines.SaveToFile(ExportedFile, TEncoding.ANSI);
+DirName:=trim(WideStringReplace(ParsedRow.Vendor,'"', '',[rfReplaceAll]));
+if length(DirName)=0 then DirName:='empty';
+ExportedFile:=FilesDir+'\'+DirName+'.csv';
+MemoHtml.Lines.Add(ExportedFile);
+try
+if FileExists(ExportedFile) then DeleteFile(ExportedFile);
+  except on E: Exception do
+  begin
+  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
+  exit;
+  end;
+end;
+MemoCodes.Lines.SaveToFile(ExportedFile, TEncoding.Utf8);
 end;
 
 procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);
 begin
 if not SaveDialog1.Execute then exit;
-MemoCode.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
+MemoCodes.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
 end;
 
-function TFormAutoMaslo.CopyBySample(SearchStr, SampleBegin, SampleEnd: WideString): WideString;
+function TFormAutoMaslo.CopyBySample(const SearchStr, SampleBegin, SampleEnd: WideString): WideString;
 var Pos1, Pos2:integer;
 begin
 Pos1:=Pos(SampleBegin, SearchStr);
@@ -329,13 +349,19 @@ for I := 1 to 9 do
   end;
 end;
 
-procedure TFormAutoMaslo.SaveIt(var Str: widestring; const FirstPosition:boolean; const isQuoted:boolean);
-var Quote:WideString;
+function TFormAutoMaslo.SavePlainTab(const Str: widestring):WideString;
 begin
-if (isQuoted=true) then Quote:='"' else Quote:='';
-if (FirstPosition = true)
-  then Str:=Quote+WideStringReplace(Str, FileSeparator, ' ',[rfReplaceAll])+Quote
-  else Str:=OutputStr+FileSeparator+Quote+WideStringReplace(Str, FileSeparator, ' ',[rfReplaceAll])+Quote;
+Result:=FileSeparator+WideStringReplace(Str, FileSeparator, ' ',[rfReplaceAll]);
+end;
+
+function TFormAutoMaslo.SaveQuotedTab(const Str: widestring):WideString;
+begin
+Result:=FileSeparator+FileQuotes+WideStringReplace(Str, FileSeparator, ' ',[rfReplaceAll])+FileQuotes;
+end;
+
+function TFormAutoMaslo.SaveFirstTab(const Str: widestring):WideString;
+begin
+Result:=FileQuotes+WideStringReplace(Str, FileSeparator, ' ',[rfReplaceAll])+FileQuotes;
 end;
 
 end.
