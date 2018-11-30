@@ -8,7 +8,7 @@ uses
   Vcl.ComCtrls;
 
 const
-FileSeparator = Chr(9);
+FileSeparator = ';';
 FileQuotes='"';
 
 Brands : array [1..9] of WideString = ('AGIP','AGRINOL','АГРИНОЛ', 'ARAL','BP','CASTROL','ELF','FUCHS TITAN','HONDA');
@@ -30,15 +30,16 @@ Export_Header : array [1..Header_size] of WideString =
 'Тип радиатора','Модель автомобиля','Размеры радиатора (mm)','Впускной диаметр (mm)','Выпускной диаметр (mm)',
 'Впускной диаметр (?)','Выпускной диаметр (?)','Комплект (шт)','Материал','Примечание');
 
-Annotation_text_header = '<p><img src="/files/uploads/oil-cange.jpg" width="179" height="130" /><img src="/files/uploads/104967w640_h640_.jpg" width="293" height="130" /></p><p><span style="font-family: arial, helvetica, sans-serif;"><strong><span style="font-size: small;">';
-Annotation_text_footer = '&nbsp;</span></strong></span></p>';
+Annotation_text_header = '<p><img src=/files/uploads/oil-cange.jpg width="179" height="130"/><img src=/files/uploads/104967w640_h640.jpg width="293" height="130" /></p><p><span style="font-family: arial, helvetica, sans-serif;"><strong><span style="font-size: small;">';
+Annotation_text_footer = '</span></strong></span></p>';
 
 //Row_size=11;
 //My_Rows :array [1..Row_size] of WideString = ('Категория','Товар','Видим','Вариант', 'Описание страницы',
 //                  'Аннотация','Описание','Изображения','Производитель','Тип масла','SAE (Вязкость)');
 type ExportRows=record
-Empty, Category, Item, Visible, variant, Description, images, Vendor:widestring;
+Empty, Category, Item, variant, Description, images, ShortImage,  Vendor:widestring;
 Model, Brand, Oil_type, SAE, Page_description, Annotation:WideString;
+Visible:WideString;
 end;
 
 // Parsed_Export:array
@@ -59,16 +60,17 @@ end;
 
 type
   TFormAutoMaslo = class(TForm)
-    BitBtn1: TBitBtn;
-    BitBtn2: TBitBtn;
+    BitBtnClose: TBitBtn;
+    BitBtnStart: TBitBtn;
     OpenDialog1: TOpenDialog;
     MemoHtml: TMemo;
     MemoCodes: TMemo;
-    BitBtn3: TBitBtn;
+    BitBtnSave: TBitBtn;
     SaveDialog1: TSaveDialog;
     PB: TProgressBar;
-    procedure BitBtn2Click(Sender: TObject);
-    procedure BitBtn3Click(Sender: TObject);
+    MemoSQL: TMemo;
+    procedure BitBtnStartClick(Sender: TObject);
+    procedure BitBtnSaveClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
@@ -94,36 +96,17 @@ implementation
 
 uses System.WideStrUtils;
 
-{
-procedure TFormAutoMaslo.AddRowToArray(NewRow: ExportRows);
-begin
-inc(ExportArray_Size);
-SetLength(ExportArray,ExportArray_Size);
-ExportArray[ExportArray_Size].Visible:=NewRow.Visible;
-ExportArray[ExportArray_Size].Category:=NewRow.Category;
-ExportArray[ExportArray_Size].Item:=NewRow.Item;
-ExportArray[ExportArray_Size].Variant:=NewRow.Variant;
-ExportArray[ExportArray_Size].Short_descr:=NewRow.Short_descr;
-ExportArray[ExportArray_Size].Full_descr:=NewRow.Full_descr;
-ExportArray[ExportArray_Size].images:=NewRow.images;
-ExportArray[ExportArray_Size].Vendor:=NewRow.Vendor;
-ExportArray[ExportArray_Size].Model:=NewRow.Model;
-ExportArray[ExportArray_Size].Oil_type:=NewRow.Oil_type;
-ExportArray[ExportArray_Size].SAE:=NewRow.SAE;
-Brand
-end;
-}
-
 procedure TFormAutoMaslo.InitRow(Row: ExportRows);
 begin
 with Row do
   begin
   Empty:='';
-  Visible:='0';
+  Visible:='';
   Category:='';
   Item:='';
   variant:='';
   images:='';
+  ShortImage:='';
   Vendor:='';
   Model:='';
   Brand:='';
@@ -135,14 +118,14 @@ with Row do
   end;
 end;
 
-procedure TFormAutoMaslo.BitBtn2Click(Sender: TObject);
+procedure TFormAutoMaslo.BitBtnStartClick(Sender: TObject);
 var FName, FilesDir:WideString;
 ParsedRow:ExportRows;
 //FileStream:TFileStream;
 //S:TStringStream;
-i,j, offset, Desc_begin, Desc_End, Desc_Len:integer;
+i,j, where, offset, Desc_begin, Desc_End, Desc_Len, IFrame_begin, IFrame_end:integer;
 ExportedFile, DirName:Widestring;
-heading_title, litraz, BigImg, SmallImg, ShortImg:WideString;
+HeadingTitle, litraz, BigImg, Annotation:WideString;
 Description:array of WideString;
 Descr:WideString;
 OutputStr:WideString;
@@ -150,7 +133,7 @@ sr:TSearchRec;
 begin
 if not OpenDialog1.Execute then exit;
 //SetLength(ExportArray,0);
-BitBtn3.Enabled:=true;
+BitBtnSave.Enabled:=true;
 PB.Position:=Pb.Min;
 MemoHtml.Clear;
 MemoCodes.Clear;
@@ -167,24 +150,36 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
   InitRow(ParsedRow);
   MemoHtml.Clear;
   MemoHtml.Lines.LoadFromFile(FilesDir+'\'+sr.Name, TEncoding.UTF8);
-  heading_title:='';
+  HeadingTitle:='';
   Litraz:='';
+  Annotation:='';
   for I := 0 to MemoHtml.Lines.Count-1 do
       begin
       if Pos('<h1 class="heading_title">',MemoHtml.Lines[i])>0
         then
           begin
-          heading_title:=ReplaceCapitals(trim(CopyBySample(MemoHtml.Lines[i], '<span>','</span>')));
-          if (Pos(',',heading_title)>0) then
+          HeadingTitle:=Uppercase(trim(CopyBySample(MemoHtml.Lines[i], '<span>','</span>')));
+          if (Pos(',',HeadingTitle)>0) or (LastDelimiter('Л',HeadingTitle)>length(HeadingTitle)-2) then
           // варианты
+          // 'title 4л'
           // 'title 4л.'
           // 'title, 4л.
-          // 'title 4л'
           // 'title,4л'
+          //вариант запятая - по ней копируем строку
+          //Запятой нет, если есть Л или Л. то убираем Л, ищем последний пробел, котоырй является разделителем
             begin
-            Litraz:=Trim(Copy(heading_title,1+Pos(',',heading_title), length(heading_title)));
-            //heading_title:=Trim(Copy(heading_title,1, -1+Pos(',',heading_title)));
-            Litraz:='Объем '+trim(WideStringReplace(litraz,',', '',[rfReplaceAll]));
+            if (Pos(',',HeadingTitle)>0) then
+              begin
+              Litraz:=Trim(Copy(HeadingTitle,1+LastDelimiter(',',HeadingTitle), length(HeadingTitle)));
+              HeadingTitle:=Trim(Copy(HeadingTitle,1, -1+LastDelimiter(',',HeadingTitle)));
+              Litraz:='Объем '+trim(WideStringReplace(litraz,'Л.', 'Л',[rfReplaceAll]));
+              end;
+            if (LastDelimiter('Л',HeadingTitle)>length(HeadingTitle)-2) then
+              begin
+              Litraz:=Trim(Copy(HeadingTitle,1+LastDelimiter(' ',HeadingTitle), length(HeadingTitle)));
+              HeadingTitle:=Trim(Copy(HeadingTitle,1, -1+LastDelimiter(' ',HeadingTitle)));
+              Litraz:='Объем '+trim(WideStringReplace(litraz,'Л.', 'Л',[rfReplaceAll]));
+              end;
             end;//
           end;//найшли heading title и litraz
       if Pos('<a itemprop="brand" content=',MemoHtml.Lines[i])>0
@@ -201,61 +196,84 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
         then
           begin
           BigImg:=Trim(CopyBySample(MemoHtml.Lines[i], 'image"><a href="','" title="'));
-          SmallImg:=Trim(CopyBySample(MemoHtml.Lines[i], '<img itemprop="image" src="','" title="'));
-          if (Length(BigImg)>0) and (Length(SmallImg)>0) then
-            begin
-            ParsedRow.images:=BigImg+','+SmallImg;
-            end;
-          if (Length(BigImg)>0) and (Length(SmallImg)=0) then
+          //SmallImg:=Trim(CopyBySample(MemoHtml.Lines[i], '<img itemprop="image" src="','" title="'));
+          //SmallImg:=''; //Убираем shortimage, он не нужен
+//          if (Length(BigImg)>0) and (Length(SmallImg)>0) then
+//            begin
+//            ParsedRow.images:=BigImg+','+SmallImg;
+//            end;
+//          if (Length(BigImg)>0) and (Length(SmallImg)=0) then
+          if (Length(BigImg)>0) then
             begin
             ParsedRow.images:=BigImg;
             end;
-          // Только большая картинка без пути
-          if (Length(BigImg)>0) then
+          if (Length(ParsedRow.images)>0) then
             begin
-            ShortImg:=WideStringReplace(ParsedRow.images, 'https://', '',[rfReplaceAll]);
-            ParsedRow.images:=WideStringReplace(ParsedRow.images, 'http://', '',[rfReplaceAll]);
-            ParsedRow.images:=WideStringReplace(ParsedRow.images,'automaslo.com', 'C:\',[rfReplaceAll]);
-            ParsedRow.images:=trim(WideStringReplace(ParsedRow.images,'/', '\',[rfReplaceAll]));
+//          https://automaslo.com/image/cache/data/products/aral/Maslo/hight_5w40_5l-800x800.JPG,https://automaslo.com/image/cache/data/products/aral/Maslo/hight_5w40_5l-350x350.JPG
+//          ../image/cache/data/products/aral/Maslo/hight_5w40_5l-800x800.JPG,../image/cache/data/products/aral/Maslo/hight_5w40_5l-350x350.JPG
+//            ShortImg:=WideStringReplace(ParsedRow.images, 'https://', '',[rfReplaceAll]);
+            ParsedRow.images:=WideStringReplace(ParsedRow.images, 'https://automaslo.com/image/cache/data/', 'http://petrik.tk/files/',[rfReplaceAll]);
+            ParsedRow.images:=WideStringReplace(ParsedRow.images, '../image/cache/data/', 'http://petrik.tk/files/',[rfReplaceAll]);
+//            ParsedRow.images:=WideStringReplace(ParsedRow.images, '../image/cache/data/', 'petrik.tk/',[rfReplaceAll]);
+//            ParsedRow.images:=WideStringReplace(ParsedRow.images,'automaslo.com', 'petrik.tk',[rfReplaceAll]);
+            //ParsedRow.images:=trim(WideStringReplace(ParsedRow.images,'/', '\',[rfReplaceAll]));
             //ParsedRow.images:=ExtractFileName(ShortImg);
-            end
-            else ParsedRow.images:='';
+            end;
           end;
       if Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
         then
           begin
           Desc_Begin:=0;
           Desc_End:=0;
-          for j:=1 to 50 do
+          for j:=0 to 50 do
             begin
             if Pos('<div class="left">',MemoHtml.Lines[i+j])>0 then Desc_Begin:=j;
             if Pos('<ul class="product-benefit">',MemoHtml.Lines[i+j])>0 then begin Desc_End:=j; break; end;
             end;
           SetLength(Description,0);
           Desc_len:=0;
-          if (Desc_End>Desc_Begin)  and not (Desc_begin+Desc_End=0) then
+          if (Desc_End>Desc_Begin) and not (Desc_begin+Desc_End=0) then
             begin
-            Desc_Len:=Desc_End-Desc_Begin;
+            Desc_Len:=Desc_End-Desc_Begin+1;
             SetLength(Description,Desc_Len);
             for j := 0 to Desc_Len-1 do
               begin
               Description[j]:=Trim(MemoHtml.Lines[i+Desc_Begin+j]);
               end;
             end;
+
+          Annotation:=Trim(MemoHtml.Lines[i+Desc_Begin+0])+Trim(MemoHtml.Lines[i+Desc_Begin+1]);
+          Annotation:=WideStringReplace(Annotation, '&amp;nbsp', '',[rfReplaceAll]);
+          Annotation:=WideStringReplace(Annotation, '&nbsp;', '',[rfReplaceAll]);
+          Annotation:=WideStringReplace(Annotation, '&amp;', '',[rfReplaceAll]);
+          Annotation:=WideStringReplace(Annotation, '&ndash;', '',[rfReplaceAll]);
           //MemoParsed.Lines.Add('Description="'+IntToStr(Desc_Begin)+'!'+IntToStr(Desc_End));
+//          for j := 0 to Desc_Len-1 do
+//            if (Pos(WideString('<div'),Description[j])>0) or (Pos(WideString('</div>'), Description[j])>0) then Description[j]:='';
           for j := 0 to Desc_Len-1 do
-            if (Pos(WideString('<div'),Description[j])>0) or (Pos(WideString('</div>'), Description[j])>0) then Description[j]:='';
+            if (Pos(WideString('</div>'), Description[j])>0) then Description[j]:='';
           Descr:='';
           for j := 0 to Desc_Len-1 do
             if not (Description[j]='') then Descr:=Descr+Description[j];
           Descr:=WideStringReplace(Descr, chr(13)+chr(10), '',[rfReplaceAll]);
+          Descr:=WideStringReplace(Descr, '&nbsp', ' ',[rfReplaceAll]);
+          if (Pos(WideString('<iframe'),Descr)>0) then IFrame_begin:=Pos(WideString('<iframe'),Descr) else IFrame_begin:=0;
+          if (Pos(WideString('</iframe>'),Descr)>0) then IFrame_end:=Pos(WideString('</iframe>'),Descr) else IFrame_end:=0;
+          if (IFrame_begin>0) and (IFrame_end>0) and (IFrame_begin<IFrame_end)
+            then
+            begin
+            Descr:=Copy(Descr, 1, IFrame_begin-1)+Copy(Descr, IFrame_end+length('</iframe>'), Length(Descr));
+            end;
+
           ParsedRow.Description:=trim(WideStringReplace(Descr, chr(9), ' ',[rfReplaceAll]));
           end;  // Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
-      ParsedRow.Category:='Авто масла/Моторные/Легковые, Авто масла/Моторные/Микроавтобусы';
-      ParsedRow.Annotation:='';
+//      ParsedRow.Category:='Авто масла/Моторные/Легковые, Авто масла/Моторные/Микроавтобусы';
+      ParsedRow.Category:='';
+      ParsedRow.Annotation:=Annotation_text_header+Annotation+Annotation_text_footer;
       ParsedRow.Page_Description:='';
-      ParsedRow.Item:=Heading_title;
-      ParsedRow.Variant:=Litraz;
+      ParsedRow.Item:=Uppercase(WideStringReplace(HeadingTitle, 'с', 'C',[rfReplaceAll]));
+      ParsedRow.Variant:=LowerCase(WideStringReplace(litraz, '.', '',[rfReplaceAll]));
+      ParsedRow.Visible:='1';
       end;   //MemoHtml.Lines.Count-1
   OutputStr:='';
   with ParsedRow do
@@ -263,7 +281,7 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
     OutputStr:=OutputStr+SaveFirstTab(ParsedRow.Category); // 1 Категория
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Item);     // 2 Товар
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 3 Поисковые метки
-    OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 4 Цена
+    OutputStr:=OutputStr+SavePlainTab('0.01');    // 4 Цена
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 5 Цена оптовая
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);   // 6 Адрес - ссылка на страницу
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Visible);  // 7 Видимый - активный на сайте
@@ -278,8 +296,8 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Page_description);    // 16 Описание страницы - Первое предложение из описания, формат текстовый
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Annotation);       // 17 Аннотация, краткое описание - HTML, Описание плюс 2 картинки
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Description); // 18 Описание
-    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.images);   // 19 Изображения
-    OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Vendor);   // 20 Производитель
+    OutputStr:=OutputStr+SavePlainTab(ParsedRow.images);   // 19 Изображения
+    OutputStr:=OutputStr+SavePlainTab(Uppercase(ParsedRow.Vendor));   // 20 Производитель
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 21 Емкость
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Oil_type);    // 22 Тип масла
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 23 Тип двигателя
@@ -308,7 +326,7 @@ end;
 MemoCodes.Lines.SaveToFile(ExportedFile, TEncoding.Utf8);
 end;
 
-procedure TFormAutoMaslo.BitBtn3Click(Sender: TObject);
+procedure TFormAutoMaslo.BitBtnSaveClick(Sender: TObject);
 begin
 if not SaveDialog1.Execute then exit;
 MemoCodes.Lines.SaveToFile(SaveDialog1.FileName, TEncoding.ANSI);
@@ -326,7 +344,7 @@ end;
 
 procedure TFormAutoMaslo.FormCreate(Sender: TObject);
 begin
-BitBtn3.Enabled:=false;
+BitBtnSave.Enabled:=false;
 end;
 
 function TFormAutoMaslo.ReplaceCapitals(const Str: Widestring): Widestring;

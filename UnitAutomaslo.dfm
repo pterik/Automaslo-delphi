@@ -17,7 +17,7 @@ object FormAutoMaslo: TFormAutoMaslo
     488)
   PixelsPerInch = 96
   TextHeight = 13
-  object BitBtn1: TBitBtn
+  object BitBtnClose: TBitBtn
     Left = 800
     Top = 455
     Width = 75
@@ -27,7 +27,7 @@ object FormAutoMaslo: TFormAutoMaslo
     NumGlyphs = 2
     TabOrder = 0
   end
-  object BitBtn2: TBitBtn
+  object BitBtnStart: TBitBtn
     Left = 16
     Top = 455
     Width = 75
@@ -37,7 +37,7 @@ object FormAutoMaslo: TFormAutoMaslo
     Kind = bkOK
     NumGlyphs = 2
     TabOrder = 1
-    OnClick = BitBtn2Click
+    OnClick = BitBtnStartClick
   end
   object MemoHtml: TMemo
     Left = 8
@@ -61,24 +61,37 @@ object FormAutoMaslo: TFormAutoMaslo
     WantReturns = False
     WordWrap = False
   end
-  object BitBtn3: TBitBtn
-    Left = 152
+  object BitBtnSave: TBitBtn
+    Left = 104
     Top = 455
     Width = 75
     Height = 25
     Anchors = [akLeft, akTop, akBottom]
     Caption = 'Save'
     TabOrder = 4
-    OnClick = BitBtn3Click
+    OnClick = BitBtnSaveClick
   end
   object PB: TProgressBar
-    Left = 272
+    Left = 200
     Top = 463
-    Width = 497
+    Width = 577
     Height = 17
     TabOrder = 5
   end
+  object MemoSQL: TMemo
+    Left = 304
+    Top = 96
+    Width = 513
+    Height = 249
+    Lines.Strings = (
+      'MemoSQL')
+    ReadOnly = True
+    ScrollBars = ssBoth
+    TabOrder = 6
+  end
   object OpenDialog1: TOpenDialog
+    DefaultExt = '*.html'
+    Filter = 'Html files|*.html|CSV files|*.csv|Text files|*.txt|Any files|*.*'
     Left = 200
     Top = 184
   end
