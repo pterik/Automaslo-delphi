@@ -37,9 +37,10 @@ Annotation_text_footer = '</span></strong></span></p>';
 //My_Rows :array [1..Row_size] of WideString = ('Категория','Товар','Видим','Вариант', 'Описание страницы',
 //                  'Аннотация','Описание','Изображения','Производитель','Тип масла','SAE (Вязкость)');
 type ExportRows=record
-Empty, Category, Item, variant, Description, images, ShortImage,  Vendor:widestring;
+Empty, Category, Item, variant,  Description, images, ShortImage,  Vendor:widestring;
 Model, Brand, Oil_type, SAE, Page_description, Annotation:WideString;
 Visible:WideString;
+Position:integer;
 end;
 
 // Parsed_Export:array
@@ -105,6 +106,7 @@ with Row do
   Category:='';
   Item:='';
   variant:='';
+  position:=0;
   images:='';
   ShortImage:='';
   Vendor:='';
@@ -125,7 +127,7 @@ ParsedRow:ExportRows;
 //S:TStringStream;
 i,j, where, offset, Desc_begin, Desc_End, Desc_Len, IFrame_begin, IFrame_end:integer;
 ExportedFile, DirName:Widestring;
-HeadingTitle, litraz, BigImg, Annotation:WideString;
+HeadingTitle, litraz, Img1, Img2,  Annotation:WideString;
 Description:array of WideString;
 Descr:WideString;
 OutputStr:WideString;
@@ -137,6 +139,7 @@ BitBtnSave.Enabled:=true;
 PB.Position:=Pb.Min;
 MemoHtml.Clear;
 MemoCodes.Clear;
+MemoSQL.Clear;
 FName:=OpenDialog1.FileName;
 FilesDir:=ExtractFileDir(FName);
 PB.StepIt;
@@ -195,31 +198,39 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
       if Pos('<div class="image">',MemoHtml.Lines[i])>0
         then
           begin
-          BigImg:=Trim(CopyBySample(MemoHtml.Lines[i], 'image"><a href="','" title="'));
-          //SmallImg:=Trim(CopyBySample(MemoHtml.Lines[i], '<img itemprop="image" src="','" title="'));
-          //SmallImg:=''; //Убираем shortimage, он не нужен
-//          if (Length(BigImg)>0) and (Length(SmallImg)>0) then
-//            begin
-//            ParsedRow.images:=BigImg+','+SmallImg;
-//            end;
-//          if (Length(BigImg)>0) and (Length(SmallImg)=0) then
-          if (Length(BigImg)>0) then
+          Img1:=Trim(CopyBySample(MemoHtml.Lines[i], 'image"><a href="','" title="'));
+          Img2:=Trim(CopyBySample(MemoHtml.Lines[i], '<img itemprop="image" src="','" title="'));
+          if (Length(Img1)>0) and (Length(Img2)=0) then
             begin
-            ParsedRow.images:=BigImg;
+            ParsedRow.images:=Img1;
+            end;
+          if (Length(Img1)=0) and (Length(Img2)>0) then
+            begin
+            ParsedRow.images:=Img2;
+            end;
+          if (Length(Img1)>0) and (Length(Img2)>0) then
+            begin
+            if Pos(WideString('800'), Img2)>0 then ParsedRow.images:=Img2;
+            if Pos(WideString('800'), Img1)>0 then ParsedRow.images:=Img1;
             end;
           if (Length(ParsedRow.images)>0) then
             begin
-//          https://automaslo.com/image/cache/data/products/aral/Maslo/hight_5w40_5l-800x800.JPG,https://automaslo.com/image/cache/data/products/aral/Maslo/hight_5w40_5l-350x350.JPG
-//          ../image/cache/data/products/aral/Maslo/hight_5w40_5l-800x800.JPG,../image/cache/data/products/aral/Maslo/hight_5w40_5l-350x350.JPG
-//            ShortImg:=WideStringReplace(ParsedRow.images, 'https://', '',[rfReplaceAll]);
             ParsedRow.images:=WideStringReplace(ParsedRow.images, 'https://automaslo.com/image/cache/data/', 'http://petrik.tk/files/',[rfReplaceAll]);
             ParsedRow.images:=WideStringReplace(ParsedRow.images, '../image/cache/data/', 'http://petrik.tk/files/',[rfReplaceAll]);
-//            ParsedRow.images:=WideStringReplace(ParsedRow.images, '../image/cache/data/', 'petrik.tk/',[rfReplaceAll]);
-//            ParsedRow.images:=WideStringReplace(ParsedRow.images,'automaslo.com', 'petrik.tk',[rfReplaceAll]);
-            //ParsedRow.images:=trim(WideStringReplace(ParsedRow.images,'/', '\',[rfReplaceAll]));
-            //ParsedRow.images:=ExtractFileName(ShortImg);
+            if LastDelimiter('/',ParsedRow.images)>0
+              then ParsedRow.images:=Copy(ParsedRow.images,LastDelimiter('/',ParsedRow.images)+1, length(ParsedRow.images));
+
+            //Сделана заготовка - сформирован полный путь. Но заготовка не используется, берём только короткое имя
+            // Необходимо сделать руками переименования:
+            // Удаляем 800x800 из имени
+            // 50x50 заменить на 100x100
+            // 267x267 заменить на 240x240
+            // 350x350 заменить на 500x500
+            if (Pos(WideString('-800x800'),ParsedRow.images)>0)
+              then ParsedRow.images:=StringReplace(ParsedRow.images,WideString('-800x800'),'',[rfReplaceAll]);
             end;
           end;
+
       if Pos('itemprop="desctiption">',MemoHtml.Lines[i])>0
         then
           begin
@@ -241,7 +252,6 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
               Description[j]:=Trim(MemoHtml.Lines[i+Desc_Begin+j]);
               end;
             end;
-
           Annotation:=Trim(MemoHtml.Lines[i+Desc_Begin+0])+Trim(MemoHtml.Lines[i+Desc_Begin+1]);
           Annotation:=WideStringReplace(Annotation, '&amp;nbsp', '',[rfReplaceAll]);
           Annotation:=WideStringReplace(Annotation, '&nbsp;', '',[rfReplaceAll]);
@@ -273,6 +283,14 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
       ParsedRow.Page_Description:='';
       ParsedRow.Item:=Uppercase(WideStringReplace(HeadingTitle, 'с', 'C',[rfReplaceAll]));
       ParsedRow.Variant:=LowerCase(WideStringReplace(litraz, '.', '',[rfReplaceAll]));
+      ParsedRow.Position:=0;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 1л') then ParsedRow.Position:=1;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 2л') then ParsedRow.Position:=2;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 4л') then ParsedRow.Position:=3;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 5л') then ParsedRow.Position:=4;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 20л') then ParsedRow.Position:=5;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 60л') then ParsedRow.Position:=6;
+      if Uppercase(ParsedRow.Variant)= UpperCase('Объем 208л') then ParsedRow.Position:=7;
       ParsedRow.Visible:='1';
       end;   //MemoHtml.Lines.Count-1
   OutputStr:='';
@@ -296,7 +314,7 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Page_description);    // 16 Описание страницы - Первое предложение из описания, формат текстовый
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Annotation);       // 17 Аннотация, краткое описание - HTML, Описание плюс 2 картинки
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Description); // 18 Описание
-    OutputStr:=OutputStr+SavePlainTab(ParsedRow.images);   // 19 Изображения
+    OutputStr:=OutputStr+SavePlainTab(lowercase(ParsedRow.Vendor)+'/'+ParsedRow.images);   // 19 Изображения
     OutputStr:=OutputStr+SavePlainTab(Uppercase(ParsedRow.Vendor));   // 20 Производитель
     OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);    // 21 Емкость
     OutputStr:=OutputStr+SaveQuotedTab(ParsedRow.Oil_type);    // 22 Тип масла
@@ -306,6 +324,34 @@ if FindFirst(FilesDir+'\*.html', FaAnyFile, sr)=0 then
     for I := 26 to Header_Size do OutputStr:=OutputStr+SavePlainTab(ParsedRow.Empty);
     end;
   MemoCodes.Lines.Add(OutputStr);
+  OutputStr:='';
+  with ParsedRow do
+    begin
+    // delete  FROM s_images WHERE product_id IN (SELECT id AS product_id FROM s_products WHERE UPPER(name) = UPPER(
+    // "ARAL SUPERSYNTH 0W-40") AND position = 1);
+    // DELETE FROM s_images s WHERE (name = CONCAT("ARAL HIGHTRONIC 5W-40"," ", "Объем 60л")) 
+    OutputStr:='DELETE FROM s_images  WHERE UPPER(name)=CONCAT(UPPER("' + ParsedRow.Item+'")," ", UPPER("'+ParsedRow.variant+'"));';
+    end;
+  MemoSQL.Lines.Add(OutputStr);
+  OutputStr:='';
+  with ParsedRow do
+    begin
+    // INSERT INTO s_images  (name, product_id, category_id, filename, position, product_id_old)
+    // SELECT CONCAT("ARAL SUPERSYNTH 0W-40"," Объем 4л") AS name, id AS product_id, 0 AS category_id,
+    // "Aral_SuperSynth_0W40_1L.jpg" AS filename, 1 as position, 0 AS product_id_old
+    // FROM s_products WHERE UPPER(name) = UPPER("ARAL SUPERSYNTH 0W-40");
+    OutputStr:='INSERT INTO s_images (name, product_id, category_id, filename, position, product_id_old) SELECT CONCAT("'
+    + ParsedRow.Item+'"," ", "'+ParsedRow.variant+'") AS name, id AS product_id, 0 AS category_id,"'
+    + lowercase(ParsedRow.Vendor)+'/'+ParsedRow.images+'" AS filename,'+IntToStr(Position)+' as Position, 0 AS product_id_old FROM s_products WHERE UPPER(name) = UPPER("'+ ParsedRow.Item +'");';
+    end;
+  MemoSQL.Lines.Add(OutputStr);
+  Todo:
+  Берём файлы и -800x800 убираем, перемещаем их в папку originals/vendor. 
+Затем копию файлов перемещаем в products/vendor и добавляем .800x600w.jpg
+Файлы -50x50 перемешаем в products, именуем .100x100.jpg и 95x95.jpg
+Файлы -267x267 перемешаем туда же, именуем .240x240.jpg
+Файлы -350x350 перемешаем туда же, именуем .300x300 и .500x500.jpg
+
   PB.StepIt;
   until Findnext(sr)<>0;
   FindClose(sr);
@@ -324,6 +370,29 @@ if FileExists(ExportedFile) then DeleteFile(ExportedFile);
   end;
 end;
 MemoCodes.Lines.SaveToFile(ExportedFile, TEncoding.Utf8);
+//ExportedFile:=FilesDir+'\'+DirName+'_delete.sql';
+//MemoHTML.Lines.Add(ExportedFile);
+//try
+//if FileExists(ExportedFile) then DeleteFile(ExportedFile);
+//  except on E: Exception do
+//  begin
+//  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
+//  exit;
+//  end;
+//end;
+//MemoSQLDelete.Lines.SaveToFile(ExportedFile, TEncoding.Utf8);
+ExportedFile:=FilesDir+'\'+DirName+'_insert.sql';
+MemoHTML.Lines.Add(ExportedFile);
+try
+if FileExists(ExportedFile) then DeleteFile(ExportedFile);
+  except on E: Exception do
+  begin
+  ShowMessage('Файл открыть в другой программе, не могу удалить - '+ExportedFile);
+  exit;
+  end;
+end;
+MemoSQL.Lines.Add('COMMIT;');
+MemoSQL.Lines.SaveToFile(ExportedFile, TEncoding.Utf8);
 end;
 
 procedure TFormAutoMaslo.BitBtnSaveClick(Sender: TObject);
